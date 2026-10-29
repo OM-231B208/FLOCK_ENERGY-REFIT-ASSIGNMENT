@@ -1,15 +1,18 @@
-﻿from pathlib import Path
+import os
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DOWNLOADS = Path.home() / "Downloads"
 
-# Where the extracted datasets live on this computer
-RAW_DIR = Path("C:/Users/om885/Downloads/REFIT_RAW_081116")
-CLEAN_DIR = Path("C:/Users/om885/Downloads/CLEAN_REFIT_081116")
+RAW_DIR = Path(
+    os.environ.get("REFIT_RAW_DIR", DOWNLOADS / "REFIT_RAW_081116")
+).expanduser()
+CLEAN_DIR = Path(
+    os.environ.get("REFIT_CLEAN_DIR", DOWNLOADS / "CLEAN_REFIT_081116")
+).expanduser()
 
 PROC_DIR = ROOT / "data" / "processed"
 FIG_DIR = ROOT / "figures"
-PROC_DIR.mkdir(parents=True, exist_ok=True)
-FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 SEED = 42
 
