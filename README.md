@@ -61,13 +61,31 @@ Individual scripts are also available as `src\section1_raw_cleaning.py`, `src\se
 
 ## Deliverables
 
-- [DATA.md](./DATA.md): Section 1 coverage, quality findings, cleaning choices, and remaining concerns.
-- [RESULTS.md](./RESULTS.md): washing-machine EDA and model evaluation.
-- [Recommendation.md](./Recommendation.md): utility-facing use, limitations, and Section 4 answers.
+The table below maps each item requested in the take-home assignment to the files and analysis in this repository.
+
+| File / deliverable | What the assignment asks for | How this repository addresses it |
+|---|---|---|
+| **Source code** | Notebook(s) or scripts that run from the supplied data through cleaning, EDA, model predictions, and evaluation. | The scripts in [`src/`](./src/) implement the workflow. Run [`src/run_analysis.py`](./src/run_analysis.py) to execute Sections 1–3 in order, or run the section scripts individually. Generated figures and processed CSVs are written to `figures/` and `data/processed/`. |
+| **README.md** | What was built; setup and run instructions; assumptions, preprocessing choices, validation design, trade-offs, AI tools, and possible improvements. | This file introduces the project and run commands, documents the key data and modeling decisions, describes validation and trade-offs, records AI-tool use, and lists follow-up improvements below. |
+| **DATA.md** | Raw-data coverage and quality findings; cleaning steps; decisions about gaps and outliers; remaining concerns. | [`DATA.md`](./DATA.md) reports the House 1 raw-data checks, cleaning rules, gap/outlier handling, coverage, and unresolved data limitations for Section 1. |
+| **RESULTS.md** | Washing-machine EDA and plots; model results; validation approach; failure analysis and interpretation. | [`RESULTS.md`](./RESULTS.md) documents the selected cleaned-data homes and periods, event rule, availability and usage findings, visualizations, baseline/model comparison, held-out-house evaluation, and model failure cases. |
+| **Recommendation.md** | One-page utility-facing summary of suitable uses and model limitations, including answers to Section 4. | [`Recommendation.md`](./Recommendation.md) gives a cautious customer-insight opportunity, a way to measure impact, transferability and deployment limits, and the implications of 15- or 30-minute data. |
+
+### How to use the deliverables
+
+Start with this README to install dependencies, configure the data locations, and run the scripts. The source scripts create the analysis outputs from the raw and official cleaned REFIT data. Read `DATA.md` for the raw House 1 quality and cleaning decisions, then `RESULTS.md` for washing-machine EDA and the held-out disaggregation evaluation. Finish with `Recommendation.md` for the practical implications and Section 4 answers. The reports explain the analysis; they do not replace rerunning it when the input data or code changes.
 
 ## AI tools
 
 Copilot SDK in VS Code assisted with code organization, implementation, and documentation. Dataset-specific mappings and findings must be validated against the official REFIT documentation and generated outputs; no results should be treated as official dataset facts unless verified.
+
+## Possible improvements
+
+- Evaluate with several held-out households or household-grouped cross-validation, not only House 5, and reserve validation households for threshold selection.
+- Improve active-event recall and energy estimates while comparing against the strong always-off baseline; do not select a model from MAE alone.
+- Audit unusually high or inconsistent appliance readings against the official REFIT documentation and, where possible, the original raw data.
+- Test transfer to local Indian smart-meter data and appliances before making deployment claims.
+- Re-run the workflow after any data, preprocessing, or model change, and report updated outputs rather than relying on saved figures or stale notebook results.
 
 ## References
 
