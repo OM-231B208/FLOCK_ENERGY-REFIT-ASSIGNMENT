@@ -41,6 +41,7 @@ TCN_BURN_IN = TCN_RECEPTIVE_FIELD - 1
 TCN_SEQUENCE_STRIDE = TCN_SEQUENCE_LENGTH - TCN_BURN_IN
 MAX_TCN_SEQUENCES_PER_HOUSE = 6_000
 THRESHOLD_CANDIDATES = np.arange(0.10, 1.00, 0.01)
+MIN_VALIDATION_F1_RETENTION = 0.80
 
 
 class Seq2PointCNN(nn.Module):
@@ -382,10 +383,15 @@ def fit_tcn(
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=1e-3, weight_decay=1e-4
     )
+    positive_weight = min(
+        float(np.sqrt(negative_count / positive_count)), 10.0
+    )
+    print(
+        "TCN activity positive weight: "
+        f"{positive_weight:.2f} (square-root imbalance, capped at 10)."
+    )
     activity_loss = nn.BCEWithLogitsLoss(
-        pos_weight=torch.tensor(
-            min(negative_count / positive_count, 30.0), dtype=torch.float32
-        )
+        pos_weight=torch.tensor(positive_weight, dtype=torch.float32)
     )
     power_loss = nn.SmoothL1Loss()
     dataset = TensorDataset(
@@ -419,6 +425,7 @@ def fit_tcn(
                     scored_target_power[scored_active],
                 )
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             total_loss += float(loss.detach()) * len(sequence)
         print(
@@ -518,30 +525,41 @@ def calibrate_threshold(
             (probabilities >= threshold)
             & (conditional_power >= WASHING_MACHINE_ACTIVE_THRESHOLD_W)
         )
+        predicted_positive_count = int(np.count_nonzero(predicted_active))
+        true_positive_count = int(np.count_nonzero(predicted_active & actual_active))
+        precision = (
+            true_positive_count / predicted_positive_count
+            if predicted_positive_count
+            else 0.0
+        )
+        recall = true_positive_count / int(np.count_nonzero(actual_active))
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if precision + recall
+            else 0.0
+        )
         prediction = np.where(predicted_active, conditional_power, 0.0)
+        error = actual - prediction
         records.append(
             {
                 "model": model_name,
                 "probability_threshold": float(threshold),
-                "validation_active_precision": precision_score(
-                    actual_active, predicted_active, zero_division=0
-                ),
-                "validation_active_recall": recall_score(
-                    actual_active, predicted_active, zero_division=0
-                ),
-                "validation_active_f1": f1_score(
-                    actual_active, predicted_active, zero_division=0
-                ),
-                "validation_mae_w": mean_absolute_error(actual, prediction),
-                "validation_rmse_w": np.sqrt(
-                    mean_squared_error(actual, prediction)
-                ),
+                "validation_active_precision": precision,
+                "validation_active_recall": recall,
+                "validation_active_f1": f1,
+                "validation_mae_w": np.mean(np.abs(error)),
+                "validation_rmse_w": np.sqrt(np.mean(np.square(error))),
             }
         )
     results = pd.DataFrame(records)
-    best = results.sort_values(
-        ["validation_active_f1", "validation_mae_w"],
-        ascending=[False, True],
+    best_f1 = results["validation_active_f1"].max()
+    near_best = results[
+        results["validation_active_f1"]
+        >= best_f1 * MIN_VALIDATION_F1_RETENTION
+    ]
+    best = near_best.sort_values(
+        ["validation_mae_w", "validation_active_f1"],
+        ascending=[True, False],
     ).iloc[0]
     return float(best["probability_threshold"]), results
 
@@ -789,7 +807,9 @@ def run() -> None:
         f"{TCN_RECEPTIVE_FIELD} minutes)."
     )
     print(
-        f"Selected thresholds: LightGBM={lgbm_threshold:.2f}, "
+        f"Selected thresholds (within {MIN_VALIDATION_F1_RETENTION:.0%} of "
+        f"best validation active F1, "
+        f"then lowest validation MAE): LightGBM={lgbm_threshold:.2f}, "
         f"Seq2Point={cnn_threshold:.2f}, TCN={tcn_threshold:.2f}."
     )
     print(results.to_string(index=False))
