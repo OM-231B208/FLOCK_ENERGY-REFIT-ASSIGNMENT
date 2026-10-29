@@ -54,8 +54,9 @@ All models predict one-minute washing-machine power for House 5 and are scored o
 - **Random Forest:** tabular aggregate-now, lag, rolling-mean and time-of-week features.
 - **Two-stage LightGBM:** active/inactive classifier followed by an active-only power regressor.
 - **Seq2Point CNN:** one-dimensional convolutional network that maps a 31-minute trailing aggregate window to the washing-machine power at the window’s last minute. This causal form uses no future readings.
+- **Temporal Convolutional Network (TCN):** causal dilated convolutions predict activity and power at each minute in a 128-minute sequence. Its 31-minute receptive field prevents future readings from influencing a timestep’s prediction. Sequences are split at missing/discontinuous minutes; the first 30 sequence positions are excluded from training loss so predictions have full historical context.
 
-To counter the very small active class, training examples are sampled by household with all observed active windows (up to the cap) and up to ten off windows per active window, capped at 50,000 samples per home. Thresholds from 0.10 to 0.99 are compared on House 3; the one maximizing active-minute F1 is selected. All model comparisons below use the same held-out minutes, but they are not claims of broad generalization: only one home is held out.
+To counter the very small active class, Random Forest, LightGBM, and Seq2Point training examples are sampled by household with up to ten off windows per active window, capped at 50,000 samples per home. TCN training uses contiguous 128-minute sequences, sampled by active-containing versus all-off sequence at up to a 1:10 ratio and capped at 6,000 per home. For learned activity models, thresholds from 0.10 to 0.99 are compared on House 3; the one maximizing active-minute F1 is selected, with MAE as the tie-breaker. Selected thresholds were 0.92 for LightGBM, 0.60 for Seq2Point, and 0.56 for TCN. All model comparisons below use the same held-out minutes, but they are not claims of broad generalization: only one home is held out.
 
 ### Metrics and results
 
@@ -64,20 +65,21 @@ MAE/RMSE measure power error in watts. Active precision, recall and F1 use the 1
 | Model | MAE (W) | RMSE (W) | R² | Active precision | Active recall | Active F1 | Predicted energy (kWh) | Energy error |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Always off | **9.63** | **91.63** | -0.011 | 0.000 | 0.000 | 0.000 | 0.00 | -100.0% |
-| Random Forest | 18.86 | 96.27 | -0.116 | 0.087 | **0.420** | **0.144** | 115.05 | +36.5% |
-| Two-stage LightGBM | 12.84 | 102.54 | -0.266 | 0.209 | 0.049 | 0.080 | 41.13 | -51.2% |
-| Seq2Point CNN | 14.67 | 118.67 | -0.696 | **0.221** | 0.083 | 0.121 | 56.72 | -32.7% |
+| Random Forest | 18.92 | 95.69 | -0.103 | 0.086 | **0.423** | **0.143** | 115.91 | +37.5% |
+| Two-stage LightGBM | **12.57** | **101.76** | **-0.247** | 0.218 | 0.045 | 0.075 | 37.65 | -55.3% |
+| Seq2Point CNN | 12.64 | 103.03 | -0.278 | **0.231** | 0.083 | 0.123 | 35.09 | -58.4% |
+| Temporal Convolutional Network | 22.97 | 135.29 | -1.204 | 0.118 | 0.127 | 0.122 | 146.91 | +74.3% |
 
 ### Interpretation
 
-Seq2Point is the temporal model most aligned with the appliance signature, and in this test it has the best energy estimate among the learned models and higher active F1 than LightGBM. It does **not** beat the Random Forest on active recall/F1, nor the always-off baseline on MAE/RMSE. The always-off result is strong because nearly all observed minutes are inactive; a low average error alone is therefore not evidence of useful appliance disaggregation. None of the tested learned models is reliable enough for customer-facing estimates.
+The TCN did not improve this held-out result: its MAE/RMSE and energy overestimate were the worst of the learned models. LightGBM had the lowest MAE/RMSE among learned models, while Random Forest had the highest active recall and F1 and the closest total-energy estimate. No learned model beat the always-off baseline on MAE/RMSE. The baseline is strong because nearly all observed minutes are inactive; a low average error alone is therefore not evidence of useful appliance disaggregation. None of the tested learned models is reliable enough for customer-facing estimates.
 
 The evaluation uses one held-out home, so its score is a case study rather than a stable estimate of performance across REFIT households. The activity threshold is tuned on one training-side validation home; more households are needed for robust threshold/model selection.
 
 ### Evaluation plot and failure cases
 
-- [House 5 actual vs predicted washing-machine power](./figures/section3_actual_vs_predicted.png) — matched 24-hour evaluation window for Random Forest, LightGBM, Seq2Point, and actual appliance power.
+- [House 5 actual vs predicted washing-machine power](./figures/section3_actual_vs_predicted.png) — matched 24-hour evaluation window for Random Forest, LightGBM, Seq2Point, TCN, and actual appliance power.
 
 Failure cases include simultaneous household loads that obscure the washing-machine signature, differences in appliance power patterns between homes, and short/low-power phases that are difficult to classify. Missing intervals and official cleaned-data processing also affect the target labels. The active class is small even after stratified sampling, and fitting across three homes does not capture all household behavior.
 
-Further work should evaluate several held-out households, compare thresholds using multiple training-side validation homes, and test appliance-specific event features or a richer temporal network. Do not deploy the current model without that validation.
+Further work should evaluate several held-out households, compare thresholds using multiple training-side validation homes, and investigate household-specific adaptation. The TCN comparison below tests whether causal sequence-to-sequence learning helps on this split; its added complexity is justified only if it improves useful held-out metrics. Do not deploy the current models without broader validation.
