@@ -11,7 +11,7 @@ The work is organized around the four sections in the assignment. The scripts ge
 3. **Build and evaluate an appliance-disaggregation model:** compares Random Forest, two-stage LightGBM, Seq2Point CNN, and a causal Temporal Convolutional Network (TCN) with an always-off baseline. House 5 is held out for final evaluation; House 3 is used for threshold validation.
 4. **Practical implications:** discusses a realistic customer-insight opportunity, how to measure it, limitations and UK-to-India transferability, and what would change with 15- or 30-minute meter readings.
 
-The model results should be interpreted cautiously: on the reported House 5 evaluation, none of the learned models outperformed the always-off baseline on MAE or RMSE. The comparison and its limitations are documented in [`RESULTS.md`](./RESULTS.md).
+The model results should be interpreted cautiously: on the reported House 5 evaluation, none of the learned models outperformed the always-off baseline on MAE or RMSE. Seq2Point is the tentative learned-model candidate if average absolute power error is the priority; Random Forest is stronger on learned-model RMSE and active-minute recall, but produces many false alarms. Neither is ready for deployment. The complete comparison and its limitations are documented in [`RESULTS.md`](./RESULTS.md).
 
 ## Data required
 

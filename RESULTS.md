@@ -65,19 +65,31 @@ To counter the very small active class, Random Forest, LightGBM, and Seq2Point t
 
 ### Metrics and results
 
-MAE/RMSE measure power error in watts. Active precision, recall and F1 use the 10 W activity threshold. Energy error compares summed predicted with actual energy; the actual evaluation energy is **84.31 kWh**.
+All rows use the same **525,298 valid House 5 evaluation minutes**. **MAE** is the average absolute power error and **RMSE** penalizes large errors more strongly; both are in watts and lower is better. **R²** compares with predicting the evaluation-set mean power; a negative value means that prediction would have been better. Active precision, recall, and F1 classify a minute as active at **10 W**; precision indicates how many predicted-active minutes are actually active, while recall indicates how many actual-active minutes are found. **Energy error** is the signed percentage difference between summed predicted and actual energy. Actual evaluation energy is **84.31 kWh**.
 
 | Model | MAE (W) | RMSE (W) | R² | Active precision | Active recall | Active F1 | Predicted energy (kWh) | Energy error |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Always off | **9.63** | **91.63** | -0.011 | 0.000 | 0.000 | 0.000 | 0.00 | -100.0% |
-| Random Forest | 18.92 | 95.69 | -0.103 | 0.086 | **0.423** | **0.143** | 115.91 | +37.5% |
+| Random Forest | 18.92 | **95.69** | -0.103 | 0.086 | **0.423** | **0.143** | 115.91 | +37.5% |
 | Two-stage LightGBM | 11.01 | 97.07 | -0.135 | 0.219 | 0.018 | 0.033 | 17.71 | -79.0% |
-| Seq2Point CNN | **10.98** | **96.58** | **-0.123** | **0.226** | 0.040 | 0.069 | 15.59 | -81.5% |
+| Seq2Point CNN | **10.98** | 96.58 | **-0.123** | **0.226** | 0.040 | 0.069 | 15.59 | -81.5% |
 | Temporal Convolutional Network | 12.64 | 112.67 | -0.529 | 0.181 | 0.015 | 0.028 | 31.62 | -62.5% |
 
-### Interpretation
+### Comparison and model preference
 
-The TCN training and threshold calibration were strengthened after an initial run produced 22.97 W MAE and a +74.3% energy overestimate. On the same held-out evaluation household, the revised run reduced TCN MAE to 12.64 W and changed the energy error to -62.5%. This is a material reduction in the initial error, but it is **not a complete fix**: the TCN still has 112.67 W RMSE, very low active F1 (0.028), and substantial energy underestimation. Seq2Point has the lowest learned-model MAE/RMSE in this rerun, while Random Forest has the highest active recall/F1 and closest total-energy estimate. No learned model beat the always-off baseline on MAE/RMSE. The baseline is strong because nearly all observed minutes are inactive; a low average error alone is therefore not evidence of useful appliance disaggregation. None of the tested learned models is reliable enough for customer-facing estimates.
+| Model | What it is useful for in this comparison | Main evidence | Assessment |
+|---|---|---|---|
+| **Always off (baseline)** | Reference point for the highly imbalanced target, not a disaggregation model. | Best MAE (9.63 W) and RMSE (91.63 W), but detects no active minutes and predicts zero energy. | **Preferred only if the objective is to minimize average pointwise power error on this test.** It is not useful for identifying washing-machine use. |
+| **Random Forest** | Simple tabular model and strongest activity-detection comparator here. | Best learned-model recall (0.423) and F1 (0.143), and its predicted total energy (115.91 kWh) is closest to the actual total (84.31 kWh). However, precision is only 0.086 and MAE is 18.92 W. | Finds more active minutes than the other learned models, but has many false alarms and overestimates total energy by 37.5%. Not a reliable estimate. |
+| **Two-stage LightGBM** | Efficient boosted-tree comparison with separate activity and power stages. | MAE is 11.01 W, but active recall is 0.018, F1 is 0.033, and energy error is -79.0%. | Misses most active minutes and substantially underestimates energy; it is not preferred on this test. |
+| **Seq2Point CNN** | Learned-model candidate for another controlled experiment focused primarily on average absolute pointwise power error. | Best learned-model MAE (10.98 W) and R² (-0.123); its RMSE (96.58 W) is second-best among learned models after Random Forest (95.69 W). Active F1 is 0.069 and energy error is -81.5%. | **Preferred only if prioritizing learned-model MAE for further testing.** It misses most active use and greatly underestimates energy, so the small MAE advantage does not make it a reliable disaggregator. |
+| **TCN** | Tests causal sequence-to-sequence learning against pointwise and tabular alternatives. | MAE 12.64 W, the worst learned-model RMSE (112.67 W), active F1 0.028, and energy error -62.5%. | Training/calibration reduced its earlier error, but it does not lead on the evaluated metrics and is not preferred for the next practical model iteration. |
+
+**Decision:** there is no validated winning disaggregation model in these results. If one learned model must be carried forward for a next experiment, **Seq2Point is the tentative choice when average absolute power error (MAE) is the primary objective**; it has the lowest learned-model MAE, but it does not have the lowest learned-model RMSE. **Random Forest is the better learned comparator when RMSE, active-minute recall/F1, or total-energy error is prioritized**, although its MAE is much worse and its precision is only 0.086. For minimizing MAE/RMSE on this particular test alone, the always-off baseline wins—but it achieves that by never detecting an appliance cycle. Therefore, do not claim that any model is ready for customer-facing appliance estimates. Selection should be revisited using multiple held-out households and a metric or decision threshold aligned with the intended use.
+
+The very low active-minute share makes the always-off baseline deceptively strong on average error. MAE/RMSE alone are not sufficient to judge NILM usefulness: active detection, total energy, and false positives show that every learned model has important weaknesses. All models also have negative R² on this evaluation, so none beats the mean-power predictor under that metric.
+
+The TCN training and threshold calibration were strengthened after an initial run produced 22.97 W MAE and a +74.3% energy overestimate. On the same held-out evaluation household, the revised run reduced TCN MAE to 12.64 W and changed the energy error to -62.5%. This is a material reduction in the initial error, but it is **not a complete fix**: the TCN still has 112.67 W RMSE, very low active F1 (0.028), and substantial energy underestimation.
 
 The evaluation uses one held-out home, so its score is a case study rather than a stable estimate of performance across REFIT households. The activity threshold is tuned on one training-side validation home; more households are needed for robust threshold/model selection.
 
