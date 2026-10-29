@@ -32,14 +32,19 @@ Off time is the share of nonmissing one-minute target readings below 10 W. Episo
 
 Across the four homes, normalized starts are most common in daytime hours, particularly around 08:00–12:00. Saturday has the highest average detected-episode start rate per valid day, followed by Sunday and Friday. This is descriptive only; small household counts, missing data, and the heuristic event definition limit generalization.
 
+The monthly coverage plot makes discontinuous coverage and long gaps visible; a household's overall missing percentage alone can hide when those gaps occurred. Daily energy is calculated only for days with at least 90% target coverage. For readability, each daily-energy panel is capped at its own 99th percentile: triangles mark values above the cap, the maximum is annotated, and the generated CSV retains the original uncapped values. Normalized episode profiles show the median and interquartile range across episodes; broad bands indicate variable episode shapes, and normalizing progress intentionally removes duration differences.
+
 ### Figures
 
 - [Representative 24-hour aggregate and washing-machine trace](./figures/section2_representative_day.png) — House 1, on a day containing a detected episode. The two axes show whole-home and appliance power at one-minute resolution.
 - [Detected operating episodes](./figures/section2_example_cycles.png) — first detected episode in each selected home, with surrounding aggregate and appliance load.
-- [Cross-house comparison](./figures/section2_household_comparison.png) — operating-episode rate per 30 valid days and per-episode energy distributions. Normalization avoids comparing raw counts from unequal coverage.
+- [Cross-house comparison](./figures/section2_household_comparison.png) — operating-episode rate per 30 valid days and detected-episode energy distributions. Normalization avoids comparing raw counts from unequal coverage.
 - [Usage by hour and weekday](./figures/section2_usage_by_hour_weekday.png) — mean episode starts per valid household-day, so homes with longer records do not dominate the heatmap.
+- [Monthly data coverage](./figures/section2_monthly_data_coverage.png) — observed target minutes by month and household.
+- [Daily washing-machine energy](./figures/section2_daily_energy.png) — valid days only; high outliers are marked rather than removed from the underlying data.
+- [Normalized episode profiles](./figures/section2_normalized_cycle_profiles.png) — median power and interquartile range over normalized episode progress for each home.
 
-The detailed machine-readable outputs are generated under `data/processed/`: household availability summary, detected episodes, and normalized time-of-use profile.
+The detailed machine-readable outputs are generated under `data/processed/`: `section2_household_summary.csv`, `section2_detected_cycles.csv`, `section2_usage_profile.csv`, `section2_monthly_coverage.csv`, and `section2_daily_energy.csv`. These are generated locally and excluded from Git; rerun the Section 2 script to recreate them.
 
 ## 3. Build and evaluate an appliance-disaggregation model
 

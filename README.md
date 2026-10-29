@@ -42,11 +42,20 @@ python src\run_analysis.py
 
 Individual scripts are also available as `src\section1_raw_cleaning.py`, `src\section2_washing_machine_eda.py`, and `src\section3_disaggregation.py`. Generated CSVs are written under `data/processed/` and figures under `figures/`. Generated processed CSVs and downloaded source archives are excluded from Git.
 
+## Project layout
+
+- `src/`: reusable loaders and the Section 1–3 analysis scripts.
+- `figures/`: generated, report-ready plots; rerun the analysis scripts to refresh them.
+- `data/processed/`: generated CSV summaries and predictions (local outputs, not committed).
+- `notebooks/`: reserved for notebooks. A pre-existing exploratory notebook is retained locally under `notebooks/archive/`; it has stale outputs and is not the reproducible analysis path.
+- `DATA.md`, `RESULTS.md`, and `Recommendation.md`: assignment reports.
+
 ## Reproducibility and design
 
 - Section 1 uses the raw House 1 files, keeps the last row for duplicate timestamps in sorted filename/source order (so Part 2 supersedes Part 1 in the overlap), sorts chronologically, and resamples to one-minute means.
 - Only internal missing gaps up to two minutes are time-interpolated. Longer and edge gaps remain missing and are reported.
 - Readings over 10 kW are flagged, not automatically removed or clipped.
+- Section 2 generates seven plots: the representative day, detected episodes, cross-house comparison, usage heatmap, monthly coverage, daily energy, and normalized episode profiles. The daily-energy plot caps each panel at its 99th percentile for readability; high days are marked, and the CSV retains uncapped values.
 - Section 3 compares Random Forest, two-stage LightGBM, a Seq2Point CNN, and a causal sequence-to-sequence TCN with an always-off baseline. Activity thresholds are selected on a training-side held-out household; final evaluation holds out House 5. Model predictions are not considered suitable for customer-facing estimates unless they improve on the baseline and are validated across more homes.
 - Washing-machine channels are documented in `src\washing_machine_mapping.py` based on the official cleaned-data readme.
 

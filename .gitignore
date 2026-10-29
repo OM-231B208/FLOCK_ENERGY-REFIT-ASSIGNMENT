@@ -5,3 +5,4 @@ data/raw/
 data/clean/
 data/*.7z
 data/processed/*.csv
+/notebooks/archive/
